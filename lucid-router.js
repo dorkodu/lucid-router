@@ -143,23 +143,26 @@ function run() {
             skeleton: null
           };
 
-          for (let i = 0; i < _LucidRouter.pages[result.name].source.components.length; ++i) {
-            // Get the component into a single variable, it's easier to work with :)
-            const component = _LucidRouter.pages[result.name].source.components[i];
+          // If page has components, save them into lucid
+          if (_LucidRouter.pages[result.name].source.components) {
+            for (let i = 0; i < _LucidRouter.pages[result.name].source.components.length; ++i) {
+              // Get the component into a single variable, it's easier to work with :)
+              const component = _LucidRouter.pages[result.name].source.components[i];
 
-            // Declare the component inside lucid
-            _LucidRouter._Lucid.components[component.name] = {
-              name: component.name,
-              state: component.state,
-              methods: component.methods,
-              render: component.render,
-              hooks: component.hooks,
-              attributes: component.attributes,
-              watch: component.watch,
-              skeleton: null
-            };
+              // Declare the component inside lucid
+              _LucidRouter._Lucid.components[component.name] = {
+                name: component.name,
+                state: component.state,
+                methods: component.methods,
+                render: component.render,
+                hooks: component.hooks,
+                attributes: component.attributes,
+                watch: component.watch,
+                skeleton: null
+              };
+            }
           }
-          console.log(_LucidRouter);
+
           // Render the page after the import
           renderPage(result.name, result.payload);
         })
