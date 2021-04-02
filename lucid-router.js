@@ -85,12 +85,10 @@ function createRouter(use, pages, error) {
   _LucidRouter.router.use = use;
   _LucidRouter.basePath = pages[0].path;
   for (let i = 0; i < pages.length; ++i) {
-    const parsedPath = parse(pages[i].path);
     _LucidRouter.pages[pages[i].name] = {
       path: pages[i].path,
       source: pages[i].source,
-      regexPath: parsedPath.regexPath,
-      properties: parsedPath.properties
+      regexPath: parse(pages[i].path)
     };
   }
   _LucidRouter.error = error;
@@ -117,77 +115,69 @@ function run() {
       // Match the url with existing pages, if there are no matches, render the error page
       const result = match(url);
       if (!result) {
-        // If there is no error page to render, return
-        if (!_LucidRouter.error)
-          return;
+        // If there is a error page to render
+        if (_LucidRouter.error) {
+          changePageTo(null, null, true);
+        }
 
         return;
       }
 
       // Set the current page's name to currentPage for later use
       _LucidRouter.currentPage = result.name;
-
-      if (typeof _LucidRouter.pages[result.name].source === "string") {
-        import(_LucidRouter.pages[result.name].source).then((module) => {
-          _LucidRouter.pages[result.name].source = module.default;
-
-          // Declare the page inside lucid, since a page in it's origin, still a component
-          _LucidRouter._Lucid.components[result.name] = {
-            name: result.name,
-            state: _LucidRouter.pages[result.name].source.state,
-            methods: _LucidRouter.pages[result.name].source.methods,
-            render: _LucidRouter.pages[result.name].source.render,
-            hooks: _LucidRouter.pages[result.name].source.hooks,
-            attributes: _LucidRouter.pages[result.name].source.attributes,
-            watch: _LucidRouter.pages[result.name].source.watch,
-            skeleton: null
-          };
-
-          // If page has components, save them into lucid
-          if (_LucidRouter.pages[result.name].source.components) {
-            for (let i = 0; i < _LucidRouter.pages[result.name].source.components.length; ++i) {
-              // Get the component into a single variable, it's easier to work with :)
-              const component = _LucidRouter.pages[result.name].source.components[i];
-
-              // Declare the component inside lucid
-              _LucidRouter._Lucid.components[component.name] = {
-                name: component.name,
-                state: component.state,
-                methods: component.methods,
-                render: component.render,
-                hooks: component.hooks,
-                attributes: component.attributes,
-                watch: component.watch,
-                skeleton: null
-              };
-            }
-          }
-
-          // Render the page after the import
-          renderPage(result.name, result.payload);
-        })
-      } else {
-        // Render the page after checking if page is imported
-        renderPage(result.name, result.payload);
-      }
-
-
+      changePageTo(result.name, result.payload, false);
       break;
     case "history":
       break;
   }
+}
 
-  //for (const pageName in _LucidRouter.pages) {
-  //  if (typeof _LucidRouter.pages[pageName].source === "string") {
-  //    import(_LucidRouter.pages[pageName].source).then((module) => {
-  //      _LucidRouter.pages[pageName].source = module.default
-  //      for (let i = 0; i < _LucidRouter.pages[pageName].source.components.length; ++i) {
-  //        const name = _LucidRouter.pages[pageName].source.components[i].name;
-  //        _LucidRouter._Lucid.components[name] = _LucidRouter.pages[pageName].source.components[i];
-  //      }
-  //    })
-  //  }
-  //}
+function changePageTo(name, payload, isErrorPage) {
+  const targetPage = isErrorPage ? _LucidRouter.error : _LucidRouter.pages[name];
+
+  if (typeof targetPage.source === "string") {
+    import(targetPage.source).then((module) => {
+      targetPage.source = module.default;
+
+      // Declare the page inside lucid, since a page in it's origin, still a component
+      _LucidRouter._Lucid.components[name] = {
+        name: name,
+        state: targetPage.source.state,
+        methods: targetPage.source.methods,
+        render: targetPage.source.render,
+        hooks: targetPage.source.hooks,
+        attributes: targetPage.source.attributes,
+        watch: targetPage.source.watch,
+        skeleton: null
+      };
+
+      // If page has components, save them into lucid
+      if (targetPage.source.components) {
+        for (let i = 0; i < targetPage.source.components.length; ++i) {
+          // Get the component into a single variable, it's easier to work with :)
+          const component = targetPage.source.components[i];
+
+          // Declare the component inside lucid
+          _LucidRouter._Lucid.components[component.name] = {
+            name: component.name,
+            state: component.state,
+            methods: component.methods,
+            render: component.render,
+            hooks: component.hooks,
+            attributes: component.attributes,
+            watch: component.watch,
+            skeleton: null
+          };
+        }
+      }
+
+      // Render the page after the import
+      renderPage(name, payload, isErrorPage);
+    })
+  } else {
+    // Render the page after checking if page is imported
+    renderPage(name, payload, isErrorPage);
+  }
 }
 
 /**
@@ -195,11 +185,13 @@ function run() {
  * @param {string} name Name of the page
  * @param {object} payload Payload of the page
  */
-function renderPage(name, payload) {
+function renderPage(name, payload, isErrorPage) {
+  const targetPage = isErrorPage ? _LucidRouter.error : _LucidRouter.pages[name];
+
   // If page doesn't have a skeleton already, create it's skeleton
   if (!_LucidRouter._Lucid.components[name].skeleton) {
     const elem = document.createElement("div");
-    elem.innerHTML = _LucidRouter.pages[name].source.render();
+    elem.innerHTML = targetPage.source.render();
 
     // Create the skeleton out of the first element node
     const childNodes = Array.from(elem.childNodes);
@@ -279,12 +271,10 @@ function back() {
 /**
  * 
  * @param {string} url 
- * @returns {{regexPath: RegExp, properties: string[]}}
+ * @returns {RegExp}
  */
 function parse(url) {
-  return {
-    regexPath: new RegExp("^" + url + "$", "i")
-  };
+  return new RegExp("^" + url + "$", "i")
 }
 
 function match(url) {
