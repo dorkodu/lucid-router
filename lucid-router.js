@@ -119,7 +119,6 @@ function run() {
 function changePageWithHash() {
   // Get the current url from hash location
   let url = "/" + window.location.hash.substr(1);
-  console.log(url);
 
   // If url is not set to any sub-path, set it to base path
   if (url === "/") {
@@ -161,6 +160,7 @@ function changePageTo(url) {
       // Change the target page to error page, set error page to true and
       // set result.name to "Error" since it's name of the error page's component
       // as well as payload to null since there can't be any payload
+      _LucidRouter.currentPage = "Error";
       targetPage = _LucidRouter.error;
       isErrorPage = true;
       result = { name: "Error", payload: null };
@@ -212,19 +212,23 @@ function changePageTo(url) {
       }
 
       // Render the page after the import
-      renderPage(result.name, result.payload, isErrorPage);
+      renderPage(result.name, result.payload);
 
       // Push the state after the page is rendered
       if (_LucidRouter.router.use === "history")
-        history.replaceState(null, null, window.location.href)
+        history.replaceState(null, null, isErrorPage ? _LucidRouter.error.path : url + window.location.search + window.location.hash)
+      else if (isErrorPage) // If using hash and error page, change the hash accordingly
+        window.location.hash = _LucidRouter.error.path.substr(1);
     })
   } else {
     // Render the page after checking if page is imported
-    renderPage(result.name, result.payload, isErrorPage);
+    renderPage(result.name, result.payload);
 
     // Push the state after the page is rendered
     if (_LucidRouter.router.use === "history")
-      history.replaceState(null, null, window.location.href)
+      history.replaceState(null, null, isErrorPage ? _LucidRouter.error.path : url + window.location.search + window.location.hash)
+    else if (isErrorPage) // If using hash and error page, change the hash accordingly
+      window.location.hash = _LucidRouter.error.path.substr(1);
   }
 }
 
@@ -232,11 +236,8 @@ function changePageTo(url) {
  * 
  * @param {string} name Name of the page
  * @param {object} payload Payload of the page
- * @param {boolean} isErrorPage If the page is an error page
  */
-function renderPage(name, payload, isErrorPage) {
-  const targetPage = isErrorPage ? _LucidRouter.error : _LucidRouter.pages[name];
-
+function renderPage(name, payload) {
   // If page doesn't have a skeleton already, create it's skeleton
   if (!_LucidRouter._Lucid.components[name].skeleton) {
     const elem = document.createElement("div");
