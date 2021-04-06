@@ -103,45 +103,85 @@ function linkLucid(lucid) {
 function run() {
   switch (_LucidRouter.router.use) {
     case "hash":
-      // Get the current url from hash location
-      let url = "/" + window.location.hash.substr(1);
+      changePageWithHash();
 
-      // If url is not set to any sub-path, set it to base path
-      if (url === "/") {
-        url = _LucidRouter.basePath;
-        window.location.hash = url.substr(1);
-      }
-
-      // Match the url with existing pages, if there are no matches, render the error page
-      const result = match(url);
-      if (!result) {
-        // If there is a error page to render
-        if (_LucidRouter.error) {
-          changePageTo(null, null, true);
-        }
-
-        return;
-      }
-
-      // Set the current page's name to currentPage for later use
-      _LucidRouter.currentPage = result.name;
-      changePageTo(result.name, result.payload, false);
+      // Add an event listener to listen for url changes
+      window.addEventListener("hashchange", () => {
+        changePageWithHash();
+      });
       break;
     case "history":
+      changePageWithHistory();
       break;
   }
 }
 
-function changePageTo(name, payload, isErrorPage) {
-  const targetPage = isErrorPage ? _LucidRouter.error : _LucidRouter.pages[name];
+function changePageWithHash() {
+  // Get the current url from hash location
+  let url = "/" + window.location.hash.substr(1);
+  console.log(url);
+
+  // If url is not set to any sub-path, set it to base path
+  if (url === "/") {
+    url = _LucidRouter.basePath;
+    window.location.hash = url.substr(1);
+  }
+
+  changePageTo(url)
+}
+
+function changePageWithHistory() {
+  let url = window.location.pathname;
+
+  // If url is not set to any sub-path, set it to base path
+  if (url === "/") {
+    url = _LucidRouter.basePath;
+  }
+
+  // Remove the last slash from the url if exists
+  if (url.lastIndexOf("/") === url.length - 1)
+    url = url.substring(0, url.length - 1)
+
+  changePageTo(url)
+}
+
+/**
+ * 
+ * @param {string} url URL of the target page
+ */
+function changePageTo(url) {
+  let targetPage;
+  let isErrorPage = false;
+
+  // Match the url with existing pages, if there are no matches, render the error page
+  let result = match(url);
+  if (!result) {
+    // If there is a error page to render
+    if (_LucidRouter.error) {
+      // Change the target page to error page, set error page to true and
+      // set result.name to "Error" since it's name of the error page's component
+      // as well as payload to null since there can't be any payload
+      targetPage = _LucidRouter.error;
+      isErrorPage = true;
+      result = { name: "Error", payload: null };
+    } else {
+      // The destination page and the error page could not be found,
+      // so there is nothing to render, return
+      return;
+    }
+  } else {
+    // Set the current page's name to currentPage for later use
+    _LucidRouter.currentPage = result.name;
+    targetPage = _LucidRouter.pages[result.name];
+  }
 
   if (typeof targetPage.source === "string") {
     import(targetPage.source).then((module) => {
       targetPage.source = module.default;
 
       // Declare the page inside lucid, since a page in it's origin, still a component
-      _LucidRouter._Lucid.components[name] = {
-        name: name,
+      _LucidRouter._Lucid.components[result.name] = {
+        name: result.name,
         state: targetPage.source.state,
         methods: targetPage.source.methods,
         render: targetPage.source.render,
@@ -172,11 +212,19 @@ function changePageTo(name, payload, isErrorPage) {
       }
 
       // Render the page after the import
-      renderPage(name, payload, isErrorPage);
+      renderPage(result.name, result.payload, isErrorPage);
+
+      // Push the state after the page is rendered
+      if (_LucidRouter.router.use === "history")
+        history.replaceState(null, null, window.location.href)
     })
   } else {
     // Render the page after checking if page is imported
-    renderPage(name, payload, isErrorPage);
+    renderPage(result.name, result.payload, isErrorPage);
+
+    // Push the state after the page is rendered
+    if (_LucidRouter.router.use === "history")
+      history.replaceState(null, null, window.location.href)
   }
 }
 
@@ -184,6 +232,7 @@ function changePageTo(name, payload, isErrorPage) {
  * 
  * @param {string} name Name of the page
  * @param {object} payload Payload of the page
+ * @param {boolean} isErrorPage If the page is an error page
  */
 function renderPage(name, payload, isErrorPage) {
   const targetPage = isErrorPage ? _LucidRouter.error : _LucidRouter.pages[name];
@@ -228,6 +277,12 @@ function renderPage(name, payload, isErrorPage) {
   _LucidRouter._Lucid.components[name].hooks && _LucidRouter._Lucid.components[name].hooks.connected && _LucidRouter._Lucid.components[name].hooks.connected.call(thisParameter);
 }
 
+/**
+ * 
+ * @param {HTMLElement} dom 
+ * @param {Skeleton} skeleton 
+ * @returns 
+ */
 function connectPage(dom, skeleton) {
   // If skeleton is a string, it's a text node that is the only child
   if (typeof skeleton === "string") {
@@ -256,8 +311,14 @@ function connectPage(dom, skeleton) {
   dom.appendChild(elem);
 }
 
-function to() {
-
+function to(url) {
+  switch (_LucidRouter.router.use) {
+    case "hash":
+      window.location.hash = url;
+      break;
+    case "history":
+      break;
+  }
 }
 
 function forward() {
@@ -288,108 +349,3 @@ function match(url) {
     }
   }
 }
-
-///**
-// * 
-// * @param {object} properties
-// * @param {('history' | 'hash')} properties.use 
-// * @param {} properties.pages
-// */
-//function create(properties) {
-//  for (const key in properties.pages) {
-//    properties.pages[key].regexPath = pathToRegex(properties.pages[key].path);
-//    properties.pages[key].name = key;
-//  }//
-
-//  _LucidRouter.router.use = properties.use;
-//  _LucidRouter.router.pages = properties.pages;//
-
-//  return _LucidRouter.router;
-//}//
-
-///**
-// * 
-// * @param {string} path 
-// */
-//function pathToRegex(path) {
-//  return new RegExp("^" + path + "$", "i");
-//}//
-
-///**
-// * 
-// * @param {} lucid 
-// */
-//function linkLucid(lucid) {
-//  _LucidRouter._Lucid = lucid;//
-
-//  switch (_LucidRouter.router.use) {
-//    case "hash":
-//      //window.location.href = "#" + _LucidRouter._Lucid.app.page.path.substr(1);//
-
-//      const url = "/" + window.location.hash.substr(1);
-//      if (url !== "/") {
-//        const page = changePage(url);//
-
-//        _LucidRouter._Lucid.app.page = _LucidRouter.router.pages[page.name];
-//        _LucidRouter._Lucid.app.page.payload = page.payload;
-//      }//
-
-//      window.addEventListener("hashchange", (e) => {
-//        e.preventDefault();//
-
-//        // Check if hashchange should be ignored
-//        if (_LucidRouter.ignoreHashChange) {
-//          _LucidRouter.ignoreHashChange = false;
-//          return;
-//        }//
-
-//        const url = "/" + window.location.hash.substr(1);
-//        const page = changePage(url);//
-
-//        // Check if hooks exist, if exist, then call "disconnected" function if exists
-//        _LucidRouter._Lucid.app.page.hooks && _LucidRouter._Lucid.app.page.hooks.connected && _LucidRouter._Lucid.app.page.hooks.disconnected();//
-
-//        // Change the current page, set the payload of the page then render the page
-//        _LucidRouter._Lucid.app.page = _LucidRouter.router.pages[page.name];
-//        _LucidRouter._Lucid.app.page.payload = page.payload;
-//        _LucidRouter._Lucid.renderPage();
-//      });
-//      break;
-//    case "history":
-//      break;
-//  }
-//}//
-
-///**
-// * 
-// * @param {string} url 
-// * @returns {{name: string, payload: string[]}}
-// */
-//function to(url) {
-//  switch (_LucidRouter.router.use) {
-//    case "hash":
-//      _LucidRouter.ignoreHashChange = true;
-//      window.location.href = "#" + url.substr(1);
-//      return changePage(url);
-//    case "history":
-//      history.pushState(null, null, url);
-//      break;
-//  }
-//}//
-
-///**
-// * 
-// * @param {string} url 
-// * @returns {{name: string, payload: string[]}}
-// */
-//function changePage(url) {
-//  for (const pageName in _LucidRouter.router.pages) {
-//    let match = url.match(_LucidRouter.router.pages[pageName].regexPath);
-//    if (match) {
-//      let payload = [];
-//      for (let i = 1; i < match.length; ++i)
-//        payload.push(match[i]);
-//      return { name: pageName, payload: payload };
-//    }
-//  }
-//}
