@@ -252,7 +252,6 @@ function renderPage(name, payload) {
     for (let i = 0; i < childNodes.length; ++i) {
       if (childNodes[i].nodeType === Node.ELEMENT_NODE) {
         _LucidRouter._Lucid.components[name].skeleton = _LucidRouter._Lucid.createSkeleton(childNodes[i], name);
-
         break;
       }
     }
@@ -261,6 +260,22 @@ function renderPage(name, payload) {
   // Remove all elements inside the container before inserting new content into it
   while (_LucidRouter._Lucid.app.container.lastChild)
     _LucidRouter._Lucid.app.container.removeChild(_LucidRouter._Lucid.app.container.lastChild);
+
+  // Call remove function for all connected elements in order to clear buffer and 
+  // to call components disconnected hook
+  for (const key in _LucidRouter._Lucid.elements) {
+    // Seperate the name and key from the element key which looks like this HomePage0 -> HomePage + 0
+    let componentName = "";
+    let componentKey;
+    let i;
+    for (i = 0; i < key.length; ++i) {
+      if (isNaN(key[i]))
+        componentName += key[i]
+    }
+    componentKey = key.substr(i - 1);
+
+    _LucidRouter._Lucid.app.remove(componentName, componentKey);
+  }
 
   // Save page's state and DOM into lucid for later use
   _LucidRouter._Lucid.elements[name + 0] = {
@@ -334,16 +349,17 @@ function to(url) {
       window.location.hash = url;
       break;
     case "history":
+      changePageTo(url);
       break;
   }
 }
 
 function forward() {
-
+  window.history.forward();
 }
 
 function back() {
-
+  window.history.back();
 }
 
 /**
