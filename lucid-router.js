@@ -179,7 +179,7 @@ function changePageTo(url) {
     import(targetPage.source).then((module) => {
       targetPage.source = module.default;
 
-      // Declare the page inside lucid, since a page in it's origin, still a component
+      // Declare the page inside lucid, since a page in it's origin still a component
       _LucidRouter._Lucid.components[result.name] = {
         name: result.name,
         state: targetPage.source.state,
@@ -240,13 +240,17 @@ function renderPage(name, payload, isErrorPage) {
   // If page doesn't have a skeleton already, create it's skeleton
   if (!_LucidRouter._Lucid.components[name].skeleton) {
     const elem = document.createElement("div");
-    elem.innerHTML = targetPage.source.render();
+
+    // Fix bug with src, if src is set, it will request the src and
+    // will fail if it's a string variable (e.g. {{state.photoPath}})
+    let elemHTML = _LucidRouter._Lucid.components[name].render();
+    elem.innerHTML = elemHTML.replace("src=", "srcName=");
 
     // Create the skeleton out of the first element node
     const childNodes = Array.from(elem.childNodes);
     for (let i = 0; i < childNodes.length; ++i) {
       if (childNodes[i].nodeType === Node.ELEMENT_NODE) {
-        _LucidRouter._Lucid.components[name].skeleton = _LucidRouter._Lucid.createSkeleton(childNodes[i]);
+        _LucidRouter._Lucid.components[name].skeleton = _LucidRouter._Lucid.createSkeleton(childNodes[i], name);
 
         break;
       }
@@ -294,8 +298,20 @@ function connectPage(dom, skeleton) {
 
   const elem = document.createElement(skeleton.tag);
 
-  for (const key in skeleton.attrs)
-    elem.setAttribute(key, skeleton.attrs[key]);
+  for (const key in skeleton.attrs) {
+    if (key.startsWith("on")) {
+      elem.addEventListener(key.substr(2), function () {
+        skeleton.attrs[key].call(_LucidRouter._Lucid.getThisParameter(_LucidRouter.currentPage, 0));
+      });
+    }
+    else {
+      const result = _LucidRouter._Lucid.convertTextVariables(skeleton.attrs[key], _LucidRouter.currentPage, 0)
+
+      // Fix bug with src, if src is set, it will request the src and
+      // will fail if it's a string variable (e.g. {{state.photoPath}})
+      elem.setAttribute(key === "srcname" ? "src" : key, result);
+    }
+  }
 
   // Get 2 lucid attributes, "lucid-component" and "lucid-key"
   const componentName = elem.getAttribute("lucid-component");
