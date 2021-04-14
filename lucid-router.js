@@ -107,6 +107,10 @@ function run() {
 
       // Add an event listener to listen for url changes
       window.addEventListener("hashchange", () => {
+        if (_LucidRouter.ignoreHashChange) {
+          _LucidRouter.ignoreHashChange = false;
+          return;
+        }
         changePageWithHash();
       });
       break;
@@ -122,6 +126,7 @@ function changePageWithHash() {
 
   // If url is not set to any sub-path, set it to base path
   if (url === "/") {
+    _LucidRouter.ignoreHashChange = true;
     url = _LucidRouter.basePath;
     window.location.hash = url.substr(1);
   }
@@ -217,8 +222,10 @@ function changePageTo(url) {
       // Push the state after the page is rendered
       if (_LucidRouter.router.use === "history")
         history.replaceState(null, null, isErrorPage ? _LucidRouter.error.path : url + window.location.search + window.location.hash)
-      else if (isErrorPage) // If using hash and error page, change the hash accordingly
+      else if (isErrorPage) { // If using hash and error page, change the hash accordingly
+        _LucidRouter.ignoreHashChange = true;
         window.location.hash = _LucidRouter.error.path.substr(1);
+      }
     })
   } else {
     // Render the page after checking if page is imported
@@ -227,8 +234,10 @@ function changePageTo(url) {
     // Push the state after the page is rendered
     if (_LucidRouter.router.use === "history")
       history.replaceState(null, null, isErrorPage ? _LucidRouter.error.path : url + window.location.search + window.location.hash)
-    else if (isErrorPage) // If using hash and error page, change the hash accordingly
+    else if (isErrorPage) { // If using hash and error page, change the hash accordingly
+      _LucidRouter.ignoreHashChange = true;
       window.location.hash = _LucidRouter.error.path.substr(1);
+    }
   }
 }
 
@@ -258,8 +267,9 @@ function renderPage(name, payload) {
   }
 
   // Remove all elements inside the container before inserting new content into it
-  while (_LucidRouter._Lucid.app.container.lastChild)
+  while (_LucidRouter._Lucid.app.container.lastChild) {
     _LucidRouter._Lucid.app.container.removeChild(_LucidRouter._Lucid.app.container.lastChild);
+  }
 
   // Call remove function for all connected elements in order to clear buffer and 
   // to call components disconnected hook
@@ -274,7 +284,10 @@ function renderPage(name, payload) {
     }
     componentKey = key.substr(i - 1);
 
-    _LucidRouter._Lucid.app.remove(componentName, componentKey);
+    // Check if hooks exist, if exist, then call "disconnected" function if exists
+    _LucidRouter._Lucid.components[componentName].hooks && _LucidRouter._Lucid.components[componentName].hooks.disconnected && _LucidRouter._Lucid.components[componentName].hooks.disconnected.call(_LucidRouter._Lucid.getThisParameter(componentName, componentKey));
+
+    delete _LucidRouter._Lucid.elements[componentName + componentKey];
   }
 
   // Save page's state and DOM into lucid for later use
@@ -346,7 +359,7 @@ function connectPage(dom, skeleton) {
 function to(url) {
   switch (_LucidRouter.router.use) {
     case "hash":
-      window.location.hash = url;
+      window.location.hash = url.substr(1);
       break;
     case "history":
       changePageTo(url);
