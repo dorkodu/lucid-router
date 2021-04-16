@@ -44,7 +44,6 @@ const _LucidRouter = {
 /**
  * 
  * @param {object} properties 
- * @param {Component[]} properties.components
  * @param {string} properties.path
  * @param {object} [properties.state]
  * @param {object} [properties.attributes]
@@ -55,7 +54,6 @@ const _LucidRouter = {
  */
 function createPage(properties) {
   return {
-    components: properties.components,
     state: properties.state,
     attributes: properties.attributes,
     methods: properties.methods,
@@ -196,26 +194,6 @@ function changePageTo(url) {
         skeleton: null
       };
 
-      // If page has components, save them into lucid
-      if (targetPage.source.components) {
-        for (let i = 0; i < targetPage.source.components.length; ++i) {
-          // Get the component into a single variable, it's easier to work with :)
-          const component = targetPage.source.components[i];
-
-          // Declare the component inside lucid
-          _LucidRouter._Lucid.components[component.name] = {
-            name: component.name,
-            state: component.state,
-            methods: component.methods,
-            render: component.render,
-            hooks: component.hooks,
-            attributes: component.attributes,
-            watch: component.watch,
-            skeleton: null
-          };
-        }
-      }
-
       // Render the page after the import
       renderPage(result.name, result.payload);
 
@@ -267,9 +245,8 @@ function renderPage(name, payload) {
   }
 
   // Remove all elements inside the container before inserting new content into it
-  while (_LucidRouter._Lucid.app.container.lastChild) {
+  while (_LucidRouter._Lucid.app.container.lastChild)
     _LucidRouter._Lucid.app.container.removeChild(_LucidRouter._Lucid.app.container.lastChild);
-  }
 
   // Call remove function for all connected elements in order to clear buffer and 
   // to call components disconnected hook
