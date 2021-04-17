@@ -182,20 +182,24 @@ function changePageTo(url) {
     import(targetPage.source).then((module) => {
       targetPage.source = module.default;
 
-      // Declare the page inside lucid, since a page in it's origin still a component
-      _LucidRouter._Lucid.components[result.name] = {
-        name: result.name,
-        state: targetPage.source.state,
-        methods: targetPage.source.methods,
-        render: targetPage.source.render,
-        hooks: targetPage.source.hooks,
-        attributes: targetPage.source.attributes,
-        watch: targetPage.source.watch,
-        skeleton: null
-      };
+      // Some apps can choose to keep the app in the same page,
+      // but load new components when entering a new page
+      if (targetPage.source) {
+        // Declare the page inside lucid, since a page in it's origin still a component
+        _LucidRouter._Lucid.components[result.name] = {
+          name: result.name,
+          state: targetPage.source.state,
+          methods: targetPage.source.methods,
+          render: targetPage.source.render,
+          hooks: targetPage.source.hooks,
+          attributes: targetPage.source.attributes,
+          watch: targetPage.source.watch,
+          skeleton: null
+        };
 
-      // Render the page after the import
-      renderPage(result.name, result.payload);
+        // Render the page after the import
+        renderPage(result.name, result.payload);
+      }
 
       // Push the state after the page is rendered
       if (_LucidRouter.router.use === "history")
@@ -206,8 +210,10 @@ function changePageTo(url) {
       }
     })
   } else {
-    // Render the page after checking if page is imported
-    renderPage(result.name, result.payload);
+    if (targetPage.source) {
+      // Render the page after checking if page is imported
+      renderPage(result.name, result.payload);
+    }
 
     // Push the state after the page is rendered
     if (_LucidRouter.router.use === "history")
