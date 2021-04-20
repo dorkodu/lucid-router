@@ -1,7 +1,3 @@
-export const LucidRouter = {
-  createRouter: createRouter
-};
-
 const _LucidRouter = {
   router: {
     redirect: redirect,
@@ -18,16 +14,6 @@ const _LucidRouter = {
   fallback: null
 };
 
-/**
- * 
- * @param {"hash" | "history"} use 
- */
-function createRouter(use) {
-  _LucidRouter.router.use = use;
-
-  return _LucidRouter.router;
-}
-
 function redirect(from, to) {
   _LucidRouter.redirects[from] = to;
 }
@@ -43,7 +29,9 @@ function route(pattern, callback) {
   })
 }
 
-function run(callback) {
+function run(use, callback) {
+  _LucidRouter.router.use = use;
+
   if (callback)
     callback();
 
@@ -108,3 +96,5 @@ function to(url) {
     _LucidRouter.fallback();
   }
 }
+
+export const router = _LucidRouter.router;
