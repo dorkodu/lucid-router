@@ -1,2 +1,2 @@
-# lucid-router
- A router for lucid.js
+# lucid-superpage
+ SuperPage, brings the awesome SPA routing to Lucid.js
