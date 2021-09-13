@@ -1,4 +1,4 @@
-const _LucidRouter = {
+const _LucidSuperpage = {
   router: {
     redirect: redirect,
     fallback: fallback,
@@ -15,28 +15,28 @@ const _LucidRouter = {
 };
 
 function redirect(from, to) {
-  _LucidRouter.redirects[from] = to;
+  _LucidSuperpage.redirects[from] = to;
 }
 
 function fallback(callback) {
-  _LucidRouter.fallback = callback;
+  _LucidSuperpage.fallback = callback;
 }
 
 function route(pattern, callback) {
-  _LucidRouter.routes.push({
+  _LucidSuperpage.routes.push({
     pattern: new RegExp("^" + pattern + "$", "i"),
     callback: callback
   })
 }
 
 function run(use, callback) {
-  _LucidRouter.router.use = use;
+  _LucidSuperpage.router.use = use;
 
   if (callback)
     callback();
 
   // If router works with hash, add a hashchange listener
-  if (_LucidRouter.router.use === "hash")
+  if (_LucidSuperpage.router.use === "hash")
     window.addEventListener("hashchange", () => { to() });
 
   to();
@@ -47,7 +47,7 @@ function run(use, callback) {
  * @param {string} [url] Target url, if no url is specified, depending on the use type of the router, hash or pathname will be used.
  */
 function to(url) {
-  switch (_LucidRouter.router.use) {
+  switch (_LucidSuperpage.router.use) {
     case "hash":
       if (!url) {
         url = "/" + window.location.hash.substr(1);
@@ -69,9 +69,9 @@ function to(url) {
   }
 
   // If a redirect for the url is present, redirect to the new url
-  const redirect = _LucidRouter.redirects[url];
+  const redirect = _LucidSuperpage.redirects[url];
   if (redirect) {
-    if (_LucidRouter.router.use === "hash") {
+    if (_LucidSuperpage.router.use === "hash") {
       window.location.hash = redirect.substr(1);
       return;
     } else {
@@ -82,19 +82,19 @@ function to(url) {
 
   // Match the url with the routes
   let matched = false;
-  for (let i = 0; i < _LucidRouter.routes.length; ++i) {
-    const match = url.match(_LucidRouter.routes[i].pattern);
+  for (let i = 0; i < _LucidSuperpage.routes.length; ++i) {
+    const match = url.match(_LucidSuperpage.routes[i].pattern);
     if (match) {
-      _LucidRouter.routes[i].callback(...match.slice(1));
+      _LucidSuperpage.routes[i].callback(...match.slice(1));
       matched = true;
       return;
     }
   }
 
   // If there is no match, run the fallback function if exists
-  if (!matched && _LucidRouter.fallback) {
-    _LucidRouter.fallback();
+  if (!matched && _LucidSuperpage.fallback) {
+    _LucidSuperpage.fallback();
   }
 }
 
-export const router = _LucidRouter.router;
+export const superpage = _LucidSuperpage.router;
