@@ -1,2 +1,2 @@
-# lucid-superpage
- SuperPage, brings the awesome SPA routing to Lucid.js
+# superpage.js
+ SuperPage, brings the awesome SPA routing to javascript.
