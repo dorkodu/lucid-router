@@ -1,6 +1,19 @@
+type PageCallback = (...args: any[]) => void;
+
+interface Route {
+  pattern: RegExp;
+  cb?: PageCallback;
+}
+
+interface Redirect {
+  from: RegExp;
+  to: string;
+  cb?: PageCallback;
+}
+
 let _use: "hash" | "history";
-let _routes: { pattern: RegExp, cb: (...args: any[]) => void }[] = [];
-let _redirects: { from: RegExp, to: string, cb: (...args: any[]) => void }[] = [];
+let _routes: Route[] = [];
+let _redirects: Redirect[] = [];
 let _fallback: (() => void) | undefined;
 
 function run(use: "hash" | "history", cb?: () => void) {
@@ -45,10 +58,10 @@ function to(url?: string) {
     const match = url.match(_redirects[i].from);
     if (match) {
       const oldUrl = url;
-      _redirects[i].cb(...match.slice(1));
+      if (_redirects[i].cb) (_redirects[i].cb as PageCallback)(...match.slice(1));
       const newUrl = url;
 
-      if (oldUrl !== newUrl) {
+      if (oldUrl === newUrl) {
         if (_use === "hash") {
           window.location.hash = _redirects[i].to;
           return;
@@ -58,6 +71,9 @@ function to(url?: string) {
           window.history.replaceState(null, "", url);
         }
       }
+      else {
+        return;
+      }
     }
   }
 
@@ -65,7 +81,7 @@ function to(url?: string) {
   for (let i = 0; i < _routes.length; ++i) {
     const match = url.match(_routes[i].pattern);
     if (match) {
-      _routes[i].cb(...match.slice(1));
+      if (_routes[i].cb) (_routes[i].cb as PageCallback)(...match.slice(1));
       return;
     }
   }
@@ -75,14 +91,14 @@ function to(url?: string) {
     _fallback();
 }
 
-function route(pattern: string, cb: (...args: any[]) => void) {
+function route(pattern: string, cb?: PageCallback) {
   _routes.push({
     pattern: new RegExp("^" + pattern + "$", "i"),
     cb: cb
   })
 }
 
-function redirect(pattern: string, to: string, cb: (...args: any[]) => void) {
+function redirect(pattern: string, to: string, cb?: PageCallback) {
   _redirects.push({
     from: new RegExp("^" + pattern + "$", "i"),
     to: to,
