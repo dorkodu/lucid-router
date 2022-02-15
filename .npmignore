@@ -1,0 +1,13 @@
+*package-lock.json
+
+*rollup.config.js
+*tsconfig.json
+
+*.gitignore
+*.gitattributes
+
+docs/
+node_modules/
+res/
+src/
+test/
