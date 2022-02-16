@@ -12,6 +12,7 @@ interface Redirect {
 }
 
 let _use: "hash" | "history";
+let _url: string = "/";
 let _routes: Route[] = [];
 let _redirects: Redirect[] = [];
 let _fallback: (() => void) | undefined;
@@ -31,23 +32,26 @@ function to(url?: string) {
   switch (_use) {
     case "hash":
       if (!url) {
-        url = "/" + window.location.hash.substring(1);
+        const hashUrl = window.location.hash.substring(1);
+        if (hashUrl !== "" && hashUrl !== "/") _url = hashUrl;
       }
       else {
-        window.location.hash = url.substring(1);
+        _url = url;
+        window.location.hash = _url;
         return;
       }
       break;
     case "history":
-      if (!url) {
-        url = window.location.pathname;
-
-        if (url.length > 1 && url.lastIndexOf("/") === url.length - 1)
-          url = url.substring(0, url.length - 1);
-      }
-      else {
-        window.history.replaceState(null, "", url);
-      }
+      // TODO: Implement
+      //if (!url) {
+      //  url = window.location.pathname;
+      //
+      //  if (url.length > 1 && url.lastIndexOf("/") === url.length - 1)
+      //    url = url.substring(0, url.length - 1);
+      //}
+      //else {
+      //  window.history.replaceState(null, "", url);
+      //}
       break;
     default:
       return;
@@ -55,11 +59,11 @@ function to(url?: string) {
 
   // Handle redirect
   for (let i = 0; i < _redirects.length; ++i) {
-    const match = url.match(_redirects[i].from);
+    const match = _url.match(_redirects[i].from);
     if (match) {
-      const oldUrl = url;
+      const oldUrl = _url;
       if (_redirects[i].cb) (_redirects[i].cb as PageCallback)(...match.slice(1));
-      const newUrl = url;
+      const newUrl = _url;
 
       if (oldUrl === newUrl) {
         if (_use === "hash") {
@@ -67,8 +71,8 @@ function to(url?: string) {
           return;
         }
         else {
-          url = _redirects[i].to;
-          window.history.replaceState(null, "", url);
+          //_url = _redirects[i].to;
+          //window.history.replaceState(null, "", _url);
         }
       }
       else {
@@ -79,7 +83,7 @@ function to(url?: string) {
 
   // Handle routes
   for (let i = 0; i < _routes.length; ++i) {
-    const match = url.match(_routes[i].pattern);
+    const match = _url.match(_routes[i].pattern);
     if (match) {
       if (_routes[i].cb) (_routes[i].cb as PageCallback)(...match.slice(1));
       return;
